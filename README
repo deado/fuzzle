@@ -1,1 +1,16 @@
 Under Developement.
+
+Requires Ruby, REXML. Please check their docs for installation information.
+
+chmod +x fuzz.rb
+./fuzz.rb
+or
+ruby fuzz.rb
+
+
+Currently it just parses "sms.xml" and out puts it to the screen in a lot easier to read format with colors.. you can change source $useColor = true to false .
+
+Default settings Red marks incoming sms. Blue marks outgoing.
+
+
+More coming soon.
