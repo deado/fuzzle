@@ -33,11 +33,12 @@ class Fuzzle
 			@type = "0" if @type == "6"
 			result = "[#{@tstamp}] #{@contact} (#{@addy}): #{@body}"
 			result = $k[@type.to_i] + result if ($useColor)
-			if out == "screen"
-				puts result
-			else
-				`touch #{out}`
-				`/bin/echo "#{result}" >> #{out}`
+			case out
+				when "screen" then puts result
+				when "search" then return
+				else
+					`touch #{out}`
+					`/bin/echo "#{result}" >> #{out}`
 			end
 		}
 	end
@@ -49,8 +50,9 @@ class Fuzzle
 	end
 	def Fuzzle.help
 		puts "http://github.com/deado/fuzzle/"
-		puts "-i, --file-in=xml		parse and print to screen only"
-		puts "-o, --file-out=xml,txt		parse xml and save to txt. no output.\n"
+		puts "-i, --file-in xml		parse and print to screen only"
+		puts "-o, --file-out xml,txt		parse xml and save to txt. no output.\n"
+		puts "-s, --search xml,txt,category	txt what what you are searching, categories(all,name,number,text)"
 		puts "-h, --help			this help msg."
 		puts "-a, --interactive		interactive mode\n"
 	end
@@ -71,11 +73,15 @@ class Fuzzle
 				$endProg = true
 		end
 	end
+	def Fuzzle.search(file, what, where)
+		puts "Coming soon..."
+	end
 end
 
 opts = GetoptLong.new(
 	[ "--file-in",		"-i",	GetoptLong::REQUIRED_ARGUMENT ],
 	[ "--file-out",		"-o",	GetoptLong::REQUIRED_ARGUMENT ],
+	[ "--search",		"-s",	GetoptLong::REQUIRED_ARGUMENT ],
 	[ "--help",		"-h",	GetoptLong::NO_ARGUMENT ],
 	[ "--interactive",	"-a",	GetoptLong::NO_ARGUMENT ]
 )
@@ -91,6 +97,9 @@ begin
 				files = []
 				files = arg.split(",")
 				Fuzzle.xml(files[0],files[1])
+			when "--search"
+				$have_opts = true
+				Fuzzle.search("this","that","there")
 			when "--help"
 				$have_opts = true
 				Fuzzle.help
@@ -106,4 +115,5 @@ begin
 				end
 		end
 	end
+	Fuzzle.help if !$have_opts
 end
