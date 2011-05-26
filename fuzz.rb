@@ -13,24 +13,8 @@ $k[2] = "\033[0;34m"
 
 class Fuzzle
 	def Fuzzle.xml(xml, out)
-		#file = File.new(xml)
 		doc = Document.new(File.new(xml))
 		doc.root.elements.each("sms") {|msg|
-			#msg.attributes.each {|n, v| 
-			#	case n
-			#		when "address" then @addy = v #phone number
-			#		when "contact_name" then @contact = v #as listed in contact list
-			#		when "body" then @body = v #actual msg
-			#		when "type" then @type = v #recieve = 1; send = 2
-			#		when "readable_date" then @tstamp = v #time stamp
-			#		# other attributes in the sms element with possible values: 
-			#		# sc_toa=n/a, protocol=0(sms), read=1,0, date=javatimestamp,
-			#		# subject=nil, toa=n/a, service_center, status=-1,0,32,64(none,complete,pending,failed), locked
-			#	end
-			#}
-			#@type = "2" if @type == "6"
-			#result = "[#{@tstamp}] #{@contact} (#{@addy}): #{@body}"
-			#result = $k[@type.to_i] + result if ($useColor)
 			Fuzzle.makenice(msg)
 			case out
 				when "screen" then puts @result
@@ -101,7 +85,6 @@ class Fuzzle
 		@type = "2" if @type == "6" #only saw type '6' one time, was a sent msg.... tested used a 3rd color for awhile.
 		@result = "[#{@tstamp}] #{@contact} (#{@addy}): #{@body}"
 		@result = $k[@type.to_i] + @result if ($useColor)
-		#puts "makenice: #{msg}"
 	end
 	def Fuzzle.search(xml, what, out)
 		if xml.empty? or what.empty?
