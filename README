@@ -13,3 +13,13 @@ ruby fuzz.rb -h
 added arguements, interactive mode writing to file instead of printing to screen. enjoy.
 
 When writing to a file, if $useColor is true it will put the ascii code to the file.
+
+
+
+5-14-11 1200 CST Update:
+
+adding search xml files for specific string.
+
+fuzz.rb --search /path/to/xml,SearchSting,</path/to/save/file>
+
+save file is optional. if none is provided, results will be printed to the screen.

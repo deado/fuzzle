@@ -13,29 +13,27 @@ $k[2] = "\033[0;34m"
 
 class Fuzzle
 	def Fuzzle.xml(xml, out)
-		file = File.new(xml)
-		doc = Document.new(file)
-
-		root = doc.root
-		root.elements.each("sms") {|msg|
-			msg.attributes.each {|n, v| 
-				case n
-					when "address" then @addy = v #phone number
-					when "contact_name" then @contact = v #as listed in contact list
-					when "body" then @body = v #actual msg
-					when "type" then @type = v #recieve = 1; send = 2
-					when "readable_date" then @tstamp = v #time stamp
-					# other attributes in the sms element with possible values: 
-					# sc_toa=n/a, protocol=0(sms), read=1,0, date=javatimestamp,
-					# subject=nil, toa=n/a, service_center, status=-1,0,32,64(none,complete,pending,failed), locked
-				end
-			}
-			@type = "0" if @type == "6"
-			result = "[#{@tstamp}] #{@contact} (#{@addy}): #{@body}"
-			result = $k[@type.to_i] + result if ($useColor)
+		#file = File.new(xml)
+		doc = Document.new(File.new(xml))
+		doc.root.elements.each("sms") {|msg|
+			#msg.attributes.each {|n, v| 
+			#	case n
+			#		when "address" then @addy = v #phone number
+			#		when "contact_name" then @contact = v #as listed in contact list
+			#		when "body" then @body = v #actual msg
+			#		when "type" then @type = v #recieve = 1; send = 2
+			#		when "readable_date" then @tstamp = v #time stamp
+			#		# other attributes in the sms element with possible values: 
+			#		# sc_toa=n/a, protocol=0(sms), read=1,0, date=javatimestamp,
+			#		# subject=nil, toa=n/a, service_center, status=-1,0,32,64(none,complete,pending,failed), locked
+			#	end
+			#}
+			#@type = "2" if @type == "6"
+			#result = "[#{@tstamp}] #{@contact} (#{@addy}): #{@body}"
+			#result = $k[@type.to_i] + result if ($useColor)
+			Fuzzle.makenice(msg)
 			case out
-				when "screen" then puts result
-				when "search" then return
+				when "screen" then puts @result
 				else
 					`touch #{out}`
 					`/bin/echo "#{result}" >> #{out}`
@@ -46,15 +44,16 @@ class Fuzzle
 		puts "help - this msg"
 		puts "print - parse xml and output only"
 		puts "save - parse xml and save to txt"
+		puts "search - search through xml for specific output"
 		puts "exit - close fuzzle"
 	end
 	def Fuzzle.help
 		puts "http://github.com/deado/fuzzle/"
-		puts "-i, --file-in xml		parse and print to screen only"
-		puts "-o, --file-out xml,txt		parse xml and save to txt. no output.\n"
-		puts "-s, --search xml,txt,category	txt what what you are searching, categories(all,name,number,text)"
-		puts "-h, --help			this help msg."
-		puts "-a, --interactive		interactive mode\n"
+		puts "-i, --file-in xml			parse and print to screen only"
+		puts "-o, --file-out xml,txt	 		parse xml and save to txt. no output.\n"
+		puts "-s, --search xml,text(,output)		text what what you are searching; output to screen or /path/to/save/file"
+		puts "-h, --help				this help msg."
+		puts "-a, --interactive			interactive mode\n"
 	end
 	def Fuzzle.cmd(cmd)
 		case cmd
@@ -63,6 +62,18 @@ class Fuzzle
 			when "print"
 				print "Path to XML: "
 				Fuzzle.xml(gets.strip, "screen")
+			when "search"
+				print "Path to XML: "
+				xml = gets.strip
+				print "What are we looking for? "
+				what = gets.strip
+				print "Path to save file ([Enter] for screen)"
+				out = gets.strip
+				if xml.empty? or what.empty?
+					puts "error: missing one or more arguments"
+					return
+				end
+				Fuzzle.search(xml, what,(!out.empty?) ? out : "screen")
 			when "save"
 				print "Path to XML: "
 				xml = gets.strip
@@ -73,8 +84,32 @@ class Fuzzle
 				$endProg = true
 		end
 	end
-	def Fuzzle.search(file, what, where)
-		puts "Coming soon..."
+	def Fuzzle.makenice(msg)
+		doc = Document.new "#{msg}"
+		doc.root.attributes.each {|n, v|
+			case n
+				when "address" then @addy = v #phone number
+				when "contact_name" then @contact = v #as listed in contact list
+				when "body" then @body = v #actual msg
+				when "type" then @type = v #recieve = 1; send = 2
+				when "readable_date" then @tstamp = v #time stamp
+				# other attributes in the sms element with possible values: 
+				# sc_toa=n/a, protocol=0(sms), read=1,0, date=javatimestamp,
+				# subject=nil, toa=n/a, service_center, status=-1,0,32,64(none,complete,pending,failed), locked
+			end
+		}
+		@type = "2" if @type == "6" #only saw type '6' one time, was a sent msg.... tested used a 3rd color for awhile.
+		@result = "[#{@tstamp}] #{@contact} (#{@addy}): #{@body}"
+		@result = $k[@type.to_i] + @result if ($useColor)
+		#puts "makenice: #{msg}"
+	end
+	def Fuzzle.search(xml, what, out)
+		if xml.empty? or what.empty?
+			puts "missing search arguments"
+			return
+		end
+		f = File.new(xml)
+		f.each {|line| puts Fuzzle.makenice(line) if line.include?(what) }
 	end
 end
 
@@ -99,7 +134,9 @@ begin
 				Fuzzle.xml(files[0],files[1])
 			when "--search"
 				$have_opts = true
-				Fuzzle.search("this","that","there")
+				search = []
+				search = arg.split(",")
+				Fuzzle.search(search[0], search[1], (search[2]) ? search[2] : "screen")
 			when "--help"
 				$have_opts = true
 				Fuzzle.help
@@ -110,10 +147,12 @@ begin
 						print "$ "
 						Fuzzle.cmd(gets.strip.downcase)
 					rescue
-						$stderr.print "error: #{$_}"
+						$stderr.print "error: #{$_}\n"
 					end
 				end
 		end
 	end
 	Fuzzle.help if !$have_opts
+rescue
+	$stderr.print "Fuzzle IO failed: " + $! + "\n"
 end
