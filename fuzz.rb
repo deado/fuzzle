@@ -20,7 +20,7 @@ class Fuzzle
 				when "screen" then puts @result
 				else
 					`touch #{out}`
-					`/bin/echo "#{result}" >> #{out}`
+					`/bin/echo "#{@result}" >> #{out}`
 			end
 		}
 	end
@@ -89,10 +89,19 @@ class Fuzzle
 	def Fuzzle.search(xml, what, out)
 		if xml.empty? or what.empty?
 			puts "missing search arguments"
-			return
+			return 0
 		end
 		f = File.new(xml)
-		f.each {|line| puts Fuzzle.makenice(line) if line.include?(what) }
+		if out == "screen" then
+			f.each {|line| puts Fuzzle.makenice(line) if line.include?(what) }
+		else
+			if FileTest.exists?(out) then
+				print "#{out}: exists... APPEND or overwrite? "
+				`rm -rf #{out}` if gets.strip.downcase == "overwrite"
+				`touch #{out}`
+				f.each {|line| `/bin/echo "#{Fuzzle.makenice(line)}" >> #{out}` if line.include?(what)}
+			end
+		end
 	end
 end
 
