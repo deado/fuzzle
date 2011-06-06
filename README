@@ -23,3 +23,12 @@ adding search xml files for specific string.
 fuzz.rb --search /path/to/xml,SearchSting,</path/to/save/file>
 
 save file is optional. if none is provided, results will be printed to the screen.
+
+
+6-06-11 1100 CST Update:
+
+combined -i and -o together the new -p.
+	-p, --parse xml(,/output/file)		parse xml and save to file. print to screen if no file given.
+	
+added conversation grouping by contacts
+	-g, --group xml,/path/to/save/dir/	parse xml and break down into files per contact. dir must exist and use trailing '/'

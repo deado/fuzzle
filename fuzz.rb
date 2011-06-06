@@ -7,17 +7,18 @@ $have_opts = false
 $endProg = false
 $useColor = true
 $k = []
-$k[0] = "\033[0m"
-$k[1] = "\033[0;31m"
-$k[2] = "\033[0;34m"
+$k[0] = "\033[0m" #nil color to end line
+$k[1] = "\033[0;31m" #incoming msgs
+$k[2] = "\033[0;34m" #outgoing msgs
 
 class Fuzzle
-	def Fuzzle.xml(xml, out)
+	def Fuzzle.parse(xml, out)
 		doc = Document.new(File.new(xml))
 		doc.root.elements.each("sms") {|msg|
 			Fuzzle.makenice(msg)
 			case out
 				when "screen" then puts @result
+				when "group" then next
 				else
 					`touch #{out}`
 					`/bin/echo "#{@result}" >> #{out}`
@@ -27,15 +28,16 @@ class Fuzzle
 	def Fuzzle.menu
 		puts "help - this msg"
 		puts "print - parse xml and output only"
-		puts "save - parse xml and save to txt"
+		puts "save - parse xml and save to file"
 		puts "search - search through xml for specific output"
+		puts "group - xml to file(s) per contact name"
 		puts "exit - close fuzzle"
 	end
 	def Fuzzle.help
 		puts "http://github.com/deado/fuzzle/"
-		puts "-i, --file-in xml			parse and print to screen only"
-		puts "-o, --file-out xml,txt	 		parse xml and save to txt. no output.\n"
+		puts "-p, --parse xml(,/path/to/save/file)	parse xml and save to file. screen if file not specified.\n"
 		puts "-s, --search xml,text(,output)		text what what you are searching; output to screen or /path/to/save/file"
+		puts "-g, --group xml,/save/dir/		xml to file(s) per contact name"
 		puts "-h, --help				this help msg."
 		puts "-a, --interactive			interactive mode\n"
 	end
@@ -45,7 +47,7 @@ class Fuzzle
 				Fuzzle.menu
 			when "print"
 				print "Path to XML: "
-				Fuzzle.xml(gets.strip, "screen")
+				Fuzzle.parse(gets.strip, "screen")
 			when "search"
 				print "Path to XML: "
 				xml = gets.strip
@@ -61,9 +63,15 @@ class Fuzzle
 			when "save"
 				print "Path to XML: "
 				xml = gets.strip
-				print "Path to TXT: "
+				print "Path to file: "
 				txt = gets.strip
-				Fuzzle.saveto(xml, txt)
+				Fuzzle.parse(xml, txt)
+			when "group"
+				print "Path to XML: "
+				xml = gets.strip
+				print "Path to save dir: "
+				savedir = gets.strip
+				Fuzzle.group(xml, savedir)
 			when "exit"
 				$endProg = true
 		end
@@ -84,7 +92,7 @@ class Fuzzle
 		}
 		@type = "2" if @type == "6" #only saw type '6' one time, was a sent msg.... tested used a 3rd color for awhile.
 		@result = "[#{@tstamp}] #{@contact} (#{@addy}): #{@body}"
-		@result = $k[@type.to_i] + @result if ($useColor)
+		@result = "#{$k[@type.to_i]}#{@result}#{$k[0]}" if ($useColor)
 	end
 	def Fuzzle.search(xml, what, out)
 		if xml.empty? or what.empty?
@@ -103,11 +111,26 @@ class Fuzzle
 			end
 		end
 	end
+	def Fuzzle.group(xml, savedir)
+		#return if xml.empty? or savedir.empty?
+		fr, nr = [], []
+		doc = Document.new(File.new(xml))
+		doc.root.elements.each("sms") {|msg|
+			Fuzzle.makenice(msg)
+			if !nr.include?(@contact) then
+				nr.push(@contact)
+				fr.push(savedir + @contact)
+			end
+			i = nr.index(@contact)
+			`touch "#{fr[i]}"`
+			`/bin/echo "#{@result}" >> "#{fr[i]}"`
+		}
+	end
 end
 
 opts = GetoptLong.new(
-	[ "--file-in",		"-i",	GetoptLong::REQUIRED_ARGUMENT ],
-	[ "--file-out",		"-o",	GetoptLong::REQUIRED_ARGUMENT ],
+	[ "--parse",		"-p",	GetoptLong::REQUIRED_ARGUMENT ],
+	[ "--group",		"-g",	GetoptLong::REQUIRED_ARGUMENT ],
 	[ "--search",		"-s",	GetoptLong::REQUIRED_ARGUMENT ],
 	[ "--help",		"-h",	GetoptLong::NO_ARGUMENT ],
 	[ "--interactive",	"-a",	GetoptLong::NO_ARGUMENT ]
@@ -116,14 +139,20 @@ opts = GetoptLong.new(
 begin
 	opts.each do |opt, arg|
 		case opt
-			when "--file-in"
-				$have_opts = true
-				Fuzzle.xml(arg, "screen")
-			when "--file-out"
+			when "--parse"
 				$have_opts = true
 				files = []
 				files = arg.split(",")
-				Fuzzle.xml(files[0],files[1])
+				if files.nitems == 2 then
+					Fuzzle.parse(files[0],files[1])
+				else
+					Fuzzle.parse(arg, "screen")
+				end
+			when "--group"
+				$have_opts = true
+				group = []
+				group = arg.split(",")
+				Fuzzle.group(group[0],group[1])
 			when "--search"
 				$have_opts = true
 				search = []
